@@ -1,1 +1,79 @@
+# Install necessary libraries
+!pip install imbalanced-learn
 
+# Import libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
+
+from imblearn.over_sampling import SMOTE
+
+# Upload dataset
+from google.colab import files
+uploaded = files.upload()
+
+# Load dataset
+df = pd.read_csv('creditcard.csv')
+
+# Display class distribution
+plt.figure(figsize=(6,4))
+sns.countplot(x='Class', data=df)
+plt.title("Transaction Class Distribution")
+plt.xticks([0, 1], ['Legit', 'Fraud'])
+plt.show()
+
+# Correlation heatmap (optional)
+plt.figure(figsize=(10,8))
+sns.heatmap(df.corr(), cmap='coolwarm', linewidths=0.5)
+plt.title("Feature Correlation Heatmap")
+plt.show()
+
+# Features and Target
+X = df.drop('Class', axis=1)
+y = df['Class']
+
+# Handle imbalance with SMOTE
+sm = SMOTE(random_state=42)
+X_res, y_res = sm.fit_resample(X, y)
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X_res, y_res, test_size=0.3, random_state=42)
+
+# Train model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Predict
+y_pred = model.predict(X_test)
+y_proba = model.predict_proba(X_test)[:, 1]
+
+# Confusion Matrix
+cm = confusion_matrix(y_test, y_pred)
+plt.figure(figsize=(5,4))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['Legit', 'Fraud'], yticklabels=['Legit', 'Fraud'])
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.title("Confusion Matrix")
+plt.show()
+
+# Classification Report
+print("Classification Report:\n", classification_report(y_test, y_pred))
+
+# ROC Curve
+fpr, tpr, thresholds = roc_curve(y_test, y_proba)
+roc_auc = auc(fpr, tpr)
+
+plt.figure(figsize=(6,5))
+plt.plot(fpr, tpr, label=f'AUC = {roc_auc:.2f}')
+plt.plot([0,1], [0,1], 'r--')
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC Curve')
+plt.legend()
+plt.grid()
+plt.show()
